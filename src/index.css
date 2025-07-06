@@ -100,6 +100,13 @@ All colors MUST be HSL.
   }
 }
 
+/* Custom rounded font for SyncInk Tracker */
+.syncink-font {
+  font-family: 'Comfortaa', 'Nunito', 'Poppins', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 /* Frosted Glass Effect */
 .glass {
   backdrop-filter: blur(20px) saturate(180%);

@@ -58,13 +58,50 @@ const AdminDashboard = () => {
   }, [selectedUser, dateFilter, submissions]);
 
   const formatSeconds = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+    return `${seconds}s`;
   };
 
   const getUserName = (userId: string) => {
     return users.find(u => u.id === userId)?.name || 'Unknown User';
+  };
+
+  // Calculate weekly and monthly averages
+  const getWeeklyAverage = (userId?: string) => {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    let relevantSubmissions = submissions;
+    if (userId) {
+      relevantSubmissions = submissions.filter(s => s.userId === userId);
+    }
+    
+    const weekSubmissions = relevantSubmissions.filter(s => 
+      new Date(s.date) >= oneWeekAgo && s.attendance === 'present'
+    );
+    
+    const totalSeconds = weekSubmissions.reduce((total, s) => total + (s.secondsDone || 0), 0);
+    const workingDays = weekSubmissions.length;
+    
+    return workingDays > 0 ? Math.round(totalSeconds / workingDays) : 0;
+  };
+
+  const getMonthlyAverage = (userId?: string) => {
+    const now = new Date();
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    
+    let relevantSubmissions = submissions;
+    if (userId) {
+      relevantSubmissions = submissions.filter(s => s.userId === userId);
+    }
+    
+    const monthSubmissions = relevantSubmissions.filter(s => 
+      new Date(s.date) >= oneMonthAgo && s.attendance === 'present'
+    );
+    
+    const totalSeconds = monthSubmissions.reduce((total, s) => total + (s.secondsDone || 0), 0);
+    const workingDays = monthSubmissions.length;
+    
+    return workingDays > 0 ? Math.round(totalSeconds / workingDays) : 0;
   };
 
   // Prepare chart data
@@ -81,7 +118,9 @@ const AdminDashboard = () => {
       totalSeconds,
       presentDays,
       totalDays,
-      attendanceRate: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+      attendanceRate: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
+      weeklyAvg: getWeeklyAverage(u.id),
+      monthlyAvg: getMonthlyAverage(u.id)
     };
   });
 
@@ -226,15 +265,16 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Stats Overview with Averages */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {[
             { title: 'Total Submissions', value: filteredSubmissions.length, color: 'text-blue-400' },
             { title: 'Present Days', value: filteredSubmissions.filter(s => s.attendance === 'present').length, color: 'text-green-400' },
-            { title: 'Total Work Time', value: formatSeconds(filteredSubmissions.filter(s => s.attendance === 'present').reduce((total, s) => total + (s.secondsDone || 0), 0)), color: 'text-purple-400' },
-            { title: 'Avg Attendance', value: `${filteredSubmissions.length > 0 ? Math.round((filteredSubmissions.filter(s => s.attendance === 'present').length / filteredSubmissions.length) * 100) : 0}%`, color: 'text-orange-400' }
+            { title: 'Total Work Seconds', value: formatSeconds(filteredSubmissions.filter(s => s.attendance === 'present').reduce((total, s) => total + (s.secondsDone || 0), 0)), color: 'text-purple-400' },
+            { title: 'Weekly Average', value: formatSeconds(getWeeklyAverage()), color: 'text-orange-400' },
+            { title: 'Monthly Average', value: formatSeconds(getMonthlyAverage()), color: 'text-pink-400' }
           ].map((stat, index) => (
             <Card key={stat.title} className="glass-card animate-scale-in" style={{ animationDelay: `${index * 0.1}s` }}>
               <CardHeader className="pb-2">
@@ -253,7 +293,7 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="glass-card animate-slide-up">
             <CardHeader>
-              <CardTitle className="text-white">Work Hours by User</CardTitle>
+              <CardTitle className="text-white">Work Seconds by User</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -302,7 +342,7 @@ const AdminDashboard = () => {
 
           <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <CardHeader>
-              <CardTitle className="text-white">Work Trend</CardTitle>
+              <CardTitle className="text-white">Work Trend (Seconds)</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -316,6 +356,7 @@ const AdminDashboard = () => {
                       border: '1px solid rgba(59, 130, 246, 0.3)',
                       borderRadius: '8px'
                     }} 
+                    formatter={(value: number) => formatSeconds(value)}
                   />
                   <Line type="monotone" dataKey="seconds" stroke="#22c55e" strokeWidth={3} dot={{ fill: '#22c55e', strokeWidth: 2, r: 6 }} />
                 </LineChart>
@@ -324,8 +365,43 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Detailed Table */}
+        {/* User Performance Table with Averages */}
         <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <CardHeader>
+            <CardTitle className="text-white">User Performance & Averages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-blue-500/30">
+                    <th className="text-left p-3 text-blue-200">User</th>
+                    <th className="text-left p-3 text-blue-200">Total Seconds</th>
+                    <th className="text-left p-3 text-blue-200">Present Days</th>
+                    <th className="text-left p-3 text-blue-200">Weekly Avg</th>
+                    <th className="text-left p-3 text-blue-200">Monthly Avg</th>
+                    <th className="text-left p-3 text-blue-200">Attendance %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userStats.map((stat) => (
+                    <tr key={stat.name} className="border-b border-blue-500/20 hover:bg-blue-600/10 transition-all duration-300">
+                      <td className="p-3 text-white font-medium">{stat.name}</td>
+                      <td className="p-3 text-purple-300">{formatSeconds(stat.totalSeconds)}</td>
+                      <td className="p-3 text-green-300">{stat.presentDays}</td>
+                      <td className="p-3 text-orange-300">{formatSeconds(stat.weeklyAvg)}</td>
+                      <td className="p-3 text-pink-300">{formatSeconds(stat.monthlyAvg)}</td>
+                      <td className="p-3 text-blue-300">{stat.attendanceRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Submissions Table */}
+        <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
           <CardHeader>
             <CardTitle className="text-white">Recent Submissions ({filteredSubmissions.length})</CardTitle>
           </CardHeader>
@@ -337,7 +413,7 @@ const AdminDashboard = () => {
                     <th className="text-left p-3 text-blue-200">Date</th>
                     <th className="text-left p-3 text-blue-200">User</th>
                     <th className="text-left p-3 text-blue-200">Attendance</th>
-                    <th className="text-left p-3 text-blue-200">Work Time</th>
+                    <th className="text-left p-3 text-blue-200">Seconds Done</th>
                     <th className="text-left p-3 text-blue-200">Remarks</th>
                   </tr>
                 </thead>

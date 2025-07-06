@@ -36,7 +36,7 @@ const LoginForm = () => {
               className="w-24 h-24 object-contain"
             />
           </div>
-          <CardTitle className="text-3xl font-bold text-white">SyncInk Tracker</CardTitle>
+          <CardTitle className="text-3xl font-bold text-white syncink-font">SyncInk Tracker</CardTitle>
           <CardDescription className="text-blue-200">
             Sign in to track your daily work progress
           </CardDescription>
