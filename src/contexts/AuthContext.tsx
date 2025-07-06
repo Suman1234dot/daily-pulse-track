@@ -26,27 +26,38 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock users for demo - in real app this would be from Supabase
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'admin@company.com',
-    role: 'admin',
-    name: 'Admin User'
-  },
-  {
-    id: '2',
-    email: 'john@company.com',
-    role: 'employee',
-    name: 'John Smith'
-  },
-  {
-    id: '3',
-    email: 'jane@company.com',
-    role: 'employee',
-    name: 'Jane Doe'
+// Function to get current users from localStorage
+const getCurrentUsers = () => {
+  const storedUsers = localStorage.getItem('syncink_users');
+  if (storedUsers) {
+    return JSON.parse(storedUsers);
   }
-];
+  
+  // Default users if none exist
+  const defaultUsers: User[] = [
+    {
+      id: '1',
+      email: 'admin@company.com',
+      role: 'admin',
+      name: 'Admin User'
+    },
+    {
+      id: '2',
+      email: 'john@company.com',
+      role: 'employee',
+      name: 'John Smith'
+    },
+    {
+      id: '3',
+      email: 'jane@company.com',
+      role: 'employee',
+      name: 'Jane Doe'
+    }
+  ];
+  
+  localStorage.setItem('syncink_users', JSON.stringify(defaultUsers));
+  return defaultUsers;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,8 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     
-    // Mock authentication - in real app this would be Supabase auth
-    const foundUser = mockUsers.find(u => u.email === email);
+    // Get current users from localStorage
+    const currentUsers = getCurrentUsers();
+    const foundUser = currentUsers.find((u: User) => u.email === email);
     
     if (foundUser && password === 'password123') {
       setUser(foundUser);

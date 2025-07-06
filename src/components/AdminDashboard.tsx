@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, Plus, Trash2 } from 'lucide-react';
+import { Users } from 'lucide-react';
+import UserManagement from './UserManagement';
 
 interface WorkSubmission {
   id: string;
@@ -21,6 +23,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role: 'employee' | 'admin';
 }
 
 const AdminDashboard = () => {
@@ -31,13 +34,47 @@ const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [showUserManagement, setShowUserManagement] = useState(false);
-  const [users] = useState<User[]>([
-    { id: '1', name: 'Admin User', email: 'admin@company.com' },
-    { id: '2', name: 'John Smith', email: 'john@company.com' },
-    { id: '3', name: 'Jane Doe', email: 'jane@company.com' }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  // Load users from localStorage on component mount
+  useEffect(() => {
+    const storedUsers = localStorage.getItem('syncink_users');
+    if (storedUsers) {
+      setUsers(JSON.parse(storedUsers));
+    } else {
+      // Initialize with default users if none exist
+      const defaultUsers: User[] = [
+        {
+          id: '1',
+          name: 'Admin User',
+          email: 'admin@company.com',
+          role: 'admin'
+        },
+        {
+          id: '2',
+          name: 'John Smith',
+          email: 'john@company.com',
+          role: 'employee'
+        },
+        {
+          id: '3',
+          name: 'Jane Doe',
+          email: 'jane@company.com',
+          role: 'employee'
+        }
+      ];
+      setUsers(defaultUsers);
+      localStorage.setItem('syncink_users', JSON.stringify(defaultUsers));
+    }
+  }, []);
+
+  // Handle user changes and persist to localStorage
+  const handleUsersChange = (updatedUsers: User[]) => {
+    setUsers(updatedUsers);
+    localStorage.setItem('syncink_users', JSON.stringify(updatedUsers));
+  };
 
   // Function to generate absent entries for employees who haven't submitted today
   const generateAbsentEntries = (actualSubmissions: WorkSubmission[]) => {
@@ -45,7 +82,7 @@ const AdminDashboard = () => {
     
     // Check each user (excluding admin) for today's submission
     users.forEach(u => {
-      if (u.id !== '1') { // Skip admin user
+      if (u.role === 'employee') { // Only check employees
         const todaySubmission = actualSubmissions.find(s => 
           s.userId === u.id && s.date === today
         );
@@ -73,7 +110,7 @@ const AdminDashboard = () => {
     setSubmissions(actualSubmissions);
     setAllSubmissions(submissionsWithAbsent);
     setFilteredSubmissions(submissionsWithAbsent);
-  }, [today]);
+  }, [today, users]);
 
   useEffect(() => {
     let filtered = [...allSubmissions];
@@ -228,37 +265,7 @@ const AdminDashboard = () => {
 
         {/* User Management Section */}
         {showUserManagement && (
-          <Card className="glass-card animate-slide-down">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                User Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add User
-                  </Button>
-                </div>
-                <div className="grid gap-3">
-                  {users.map(user => (
-                    <div key={user.id} className="flex justify-between items-center p-3 glass rounded-xl">
-                      <div>
-                        <p className="text-white font-medium">{user.name}</p>
-                        <p className="text-blue-300 text-sm">{user.email}</p>
-                      </div>
-                      <Button size="sm" variant="destructive" className="opacity-70 hover:opacity-100">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <UserManagement users={users} onUsersChange={handleUsersChange} />
         )}
 
         {/* Filters */}
