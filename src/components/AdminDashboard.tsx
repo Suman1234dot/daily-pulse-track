@@ -65,7 +65,7 @@ const AdminDashboard = () => {
     return users.find(u => u.id === userId)?.name || 'Unknown User';
   };
 
-  // Calculate weekly and monthly averages
+  // Calculate weekly and monthly averages (OVERALL)
   const getWeeklyAverage = (userId?: string) => {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -265,7 +265,7 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </CardContent>
-        </div>
+        </Card>
 
         {/* Stats Overview with Averages */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
