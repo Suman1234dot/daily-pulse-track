@@ -27,6 +27,7 @@ interface User {
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [submissions, setSubmissions] = useState<WorkSubmission[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<WorkSubmission[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<WorkSubmission[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
@@ -37,14 +38,46 @@ const AdminDashboard = () => {
     { id: '3', name: 'Jane Doe', email: 'jane@company.com' }
   ]);
 
-  useEffect(() => {
-    const allSubmissions = JSON.parse(localStorage.getItem('syncink_submissions') || '[]');
-    setSubmissions(allSubmissions);
-    setFilteredSubmissions(allSubmissions);
-  }, []);
+  const today = new Date().toISOString().split('T')[0];
+
+  // Function to generate absent entries for employees who haven't submitted today
+  const generateAbsentEntries = (actualSubmissions: WorkSubmission[]) => {
+    const submissionsWithAbsent = [...actualSubmissions];
+    
+    // Check each user (excluding admin) for today's submission
+    users.forEach(u => {
+      if (u.id !== '1') { // Skip admin user
+        const todaySubmission = actualSubmissions.find(s => 
+          s.userId === u.id && s.date === today
+        );
+        
+        if (!todaySubmission) {
+          // Create absent entry for users who haven't submitted
+          submissionsWithAbsent.push({
+            id: `auto-absent-${u.id}-${today}`,
+            userId: u.id,
+            date: today,
+            attendance: 'absent',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    return submissionsWithAbsent;
+  };
 
   useEffect(() => {
-    let filtered = [...submissions];
+    const actualSubmissions = JSON.parse(localStorage.getItem('syncink_submissions') || '[]');
+    const submissionsWithAbsent = generateAbsentEntries(actualSubmissions);
+    
+    setSubmissions(actualSubmissions);
+    setAllSubmissions(submissionsWithAbsent);
+    setFilteredSubmissions(submissionsWithAbsent);
+  }, [today]);
+
+  useEffect(() => {
+    let filtered = [...allSubmissions];
 
     if (selectedUser !== 'all') {
       filtered = filtered.filter(s => s.userId === selectedUser);
@@ -55,7 +88,7 @@ const AdminDashboard = () => {
     }
 
     setFilteredSubmissions(filtered);
-  }, [selectedUser, dateFilter, submissions]);
+  }, [selectedUser, dateFilter, allSubmissions]);
 
   const formatSeconds = (seconds: number) => {
     return `${seconds}s`;
@@ -70,9 +103,9 @@ const AdminDashboard = () => {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-    let relevantSubmissions = submissions;
+    let relevantSubmissions = allSubmissions;
     if (userId) {
-      relevantSubmissions = submissions.filter(s => s.userId === userId);
+      relevantSubmissions = allSubmissions.filter(s => s.userId === userId);
     }
     
     const weekSubmissions = relevantSubmissions.filter(s => 
@@ -89,9 +122,9 @@ const AdminDashboard = () => {
     const now = new Date();
     const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
     
-    let relevantSubmissions = submissions;
+    let relevantSubmissions = allSubmissions;
     if (userId) {
-      relevantSubmissions = submissions.filter(s => s.userId === userId);
+      relevantSubmissions = allSubmissions.filter(s => s.userId === userId);
     }
     
     const monthSubmissions = relevantSubmissions.filter(s => 
@@ -104,9 +137,9 @@ const AdminDashboard = () => {
     return workingDays > 0 ? Math.round(totalSeconds / workingDays) : 0;
   };
 
-  // Prepare chart data
+  // Prepare chart data using allSubmissions (includes auto-absent entries)
   const userStats = users.map(u => {
-    const userSubmissions = submissions.filter(s => s.userId === u.id);
+    const userSubmissions = allSubmissions.filter(s => s.userId === u.id);
     const totalSeconds = userSubmissions
       .filter(s => s.attendance === 'present')
       .reduce((total, s) => total + (s.secondsDone || 0), 0);
@@ -125,11 +158,11 @@ const AdminDashboard = () => {
   });
 
   const attendanceData = [
-    { name: 'Present', value: submissions.filter(s => s.attendance === 'present').length, color: '#22c55e' },
-    { name: 'Absent', value: submissions.filter(s => s.attendance === 'absent').length, color: '#ef4444' }
+    { name: 'Present', value: allSubmissions.filter(s => s.attendance === 'present').length, color: '#22c55e' },
+    { name: 'Absent', value: allSubmissions.filter(s => s.attendance === 'absent').length, color: '#ef4444' }
   ];
 
-  const weeklyTrend = submissions
+  const weeklyTrend = allSubmissions
     .filter(s => s.attendance === 'present')
     .slice(-14)
     .reduce((acc, curr) => {
@@ -162,7 +195,7 @@ const AdminDashboard = () => {
     a.href = url;
     a.download = 'syncink-tracking-data.csv';
     a.click();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURLURL);
   };
 
   return (
@@ -432,6 +465,7 @@ const AdminDashboard = () => {
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'
                         }`}>
                           {submission.attendance}
+                          {submission.id.startsWith('auto-absent-') && ' (Auto)'}
                         </span>
                       </td>
                       <td className="p-3 text-blue-100">
