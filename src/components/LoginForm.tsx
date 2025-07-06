@@ -20,6 +20,10 @@ const LoginForm = () => {
     }
   };
 
+  const handleRememberMeChange = (checked: boolean | "indeterminate") => {
+    setRememberMe(checked === true);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-black to-blue-800/20"></div>
@@ -67,7 +71,7 @@ const LoginForm = () => {
               <Checkbox 
                 id="remember"
                 checked={rememberMe}
-                onCheckedChange={setRememberMe}
+                onCheckedChange={handleRememberMeChange}
                 className="border-blue-500/30 data-[state=checked]:bg-blue-600"
               />
               <Label htmlFor="remember" className="text-blue-100 text-sm">
