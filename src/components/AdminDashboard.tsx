@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -195,7 +194,7 @@ const AdminDashboard = () => {
     a.href = url;
     a.download = 'syncink-tracking-data.csv';
     a.click();
-    window.URL.revokeObjectURLURL);
+    window.URL.revokeObjectURL(url);
   };
 
   return (
