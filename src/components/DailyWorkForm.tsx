@@ -31,7 +31,7 @@ const DailyWorkForm = () => {
 
   useEffect(() => {
     // Check if user has already submitted today
-    const submissions = JSON.parse(localStorage.getItem('worktrack_submissions') || '[]');
+    const submissions = JSON.parse(localStorage.getItem('syncink_submissions') || '[]');
     const todaySubmission = submissions.find((s: WorkSubmission) => 
       s.userId === user?.id && s.date === today
     );
@@ -78,7 +78,7 @@ const DailyWorkForm = () => {
     };
 
     // Save to localStorage (in real app, this would be Supabase)
-    const submissions = JSON.parse(localStorage.getItem('worktrack_submissions') || '[]');
+    const submissions = JSON.parse(localStorage.getItem('syncink_submissions') || '[]');
     const existingIndex = submissions.findIndex((s: WorkSubmission) => 
       s.userId === user?.id && s.date === today
     );
@@ -89,7 +89,7 @@ const DailyWorkForm = () => {
       submissions.push(submission);
     }
 
-    localStorage.setItem('worktrack_submissions', JSON.stringify(submissions));
+    localStorage.setItem('syncink_submissions', JSON.stringify(submissions));
     
     setHasSubmittedToday(true);
     toast({
@@ -101,12 +101,12 @@ const DailyWorkForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-center">
-          Daily Work Entry
+    <Card className="w-full max-w-md mx-auto glass-card animate-slide-up">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold text-white">
+          Kaam Kitna Kiya?
         </CardTitle>
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm text-blue-200">
           {new Date().toLocaleDateString('en-US', { 
             weekday: 'long', 
             year: 'numeric', 
@@ -116,9 +116,9 @@ const DailyWorkForm = () => {
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="attendance">Attendance Status</Label>
+            <Label htmlFor="attendance" className="text-blue-100">Attendance Status</Label>
             <Select
               value={attendance}
               onValueChange={(value) => {
@@ -130,10 +130,10 @@ const DailyWorkForm = () => {
               }}
               disabled={hasSubmittedToday}
             >
-              <SelectTrigger>
+              <SelectTrigger className="glass border-blue-500/30 text-white">
                 <SelectValue placeholder="Select attendance" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="glass border-blue-500/30">
                 <SelectItem value="present">Present</SelectItem>
                 <SelectItem value="absent">Absent</SelectItem>
               </SelectContent>
@@ -141,9 +141,9 @@ const DailyWorkForm = () => {
           </div>
 
           {attendance === 'present' && (
-            <>
+            <div className="space-y-6 animate-slide-down">
               <div className="space-y-2">
-                <Label htmlFor="secondsDone">Seconds Done</Label>
+                <Label htmlFor="secondsDone" className="text-blue-100">Seconds Done</Label>
                 <Input
                   id="secondsDone"
                   type="number"
@@ -152,11 +152,12 @@ const DailyWorkForm = () => {
                   onChange={(e) => setSecondsDone(e.target.value)}
                   disabled={hasSubmittedToday}
                   min="0"
+                  className="glass border-blue-500/30 text-white placeholder-blue-300/50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="remarks">Remarks (Optional)</Label>
+                <Label htmlFor="remarks" className="text-blue-100">Remarks (Optional)</Label>
                 <Textarea
                   id="remarks"
                   placeholder="Any additional notes..."
@@ -164,21 +165,22 @@ const DailyWorkForm = () => {
                   onChange={(e) => setRemarks(e.target.value)}
                   disabled={hasSubmittedToday}
                   rows={3}
+                  className="glass border-blue-500/30 text-white placeholder-blue-300/50"
                 />
               </div>
-            </>
+            </div>
           )}
 
           <Button 
             type="submit" 
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 transform hover:scale-105"
             disabled={isSubmitting || hasSubmittedToday}
           >
             {isSubmitting ? 'Submitting...' : hasSubmittedToday ? 'Already Submitted Today' : 'Submit Work Entry'}
           </Button>
 
           {hasSubmittedToday && (
-            <p className="text-sm text-green-600 text-center">
+            <p className="text-sm text-green-400 text-center animate-fade-in">
               ✓ You have successfully submitted your work entry for today
             </p>
           )}

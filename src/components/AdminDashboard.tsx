@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Users, Plus, Trash2 } from 'lucide-react';
 
 interface WorkSubmission {
   id: string;
@@ -29,6 +30,7 @@ const AdminDashboard = () => {
   const [filteredSubmissions, setFilteredSubmissions] = useState<WorkSubmission[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [showUserManagement, setShowUserManagement] = useState(false);
   const [users] = useState<User[]>([
     { id: '1', name: 'Admin User', email: 'admin@company.com' },
     { id: '2', name: 'John Smith', email: 'john@company.com' },
@@ -36,7 +38,7 @@ const AdminDashboard = () => {
   ]);
 
   useEffect(() => {
-    const allSubmissions = JSON.parse(localStorage.getItem('worktrack_submissions') || '[]');
+    const allSubmissions = JSON.parse(localStorage.getItem('syncink_submissions') || '[]');
     setSubmissions(allSubmissions);
     setFilteredSubmissions(allSubmissions);
   }, []);
@@ -84,11 +86,24 @@ const AdminDashboard = () => {
   });
 
   const attendanceData = [
-    { name: 'Present', value: submissions.filter(s => s.attendance === 'present').length },
-    { name: 'Absent', value: submissions.filter(s => s.attendance === 'absent').length }
+    { name: 'Present', value: submissions.filter(s => s.attendance === 'present').length, color: '#22c55e' },
+    { name: 'Absent', value: submissions.filter(s => s.attendance === 'absent').length, color: '#ef4444' }
   ];
 
-  const COLORS = ['#22c55e', '#ef4444'];
+  const weeklyTrend = submissions
+    .filter(s => s.attendance === 'present')
+    .slice(-14)
+    .reduce((acc, curr) => {
+      const date = curr.date;
+      if (!acc[date]) acc[date] = 0;
+      acc[date] += curr.secondsDone || 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const trendData = Object.entries(weeklyTrend).map(([date, seconds]) => ({
+    date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    seconds
+  }));
 
   const exportData = () => {
     const csvContent = [
@@ -106,38 +121,88 @@ const AdminDashboard = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'work-tracking-data.csv';
+    a.download = 'syncink-tracking-data.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen p-4 animate-fade-in">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-600">Work Tracking Overview</p>
+        <div className="glass-card p-6 rounded-2xl animate-slide-down">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+              <p className="text-blue-200">SyncInk Work Tracking Overview</p>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowUserManagement(!showUserManagement)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Manage Users
+              </Button>
+              <Button 
+                onClick={logout} 
+                variant="outline"
+                className="glass border-blue-500/30 text-blue-100 hover:bg-blue-600/20"
+              >
+                Logout
+              </Button>
+            </div>
           </div>
-          <Button onClick={logout} variant="outline">
-            Logout
-          </Button>
         </div>
 
+        {/* User Management Section */}
+        {showUserManagement && (
+          <Card className="glass-card animate-slide-down">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                User Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
+                <div className="grid gap-3">
+                  {users.map(user => (
+                    <div key={user.id} className="flex justify-between items-center p-3 glass rounded-xl">
+                      <div>
+                        <p className="text-white font-medium">{user.name}</p>
+                        <p className="text-blue-300 text-sm">{user.email}</p>
+                      </div>
+                      <Button size="sm" variant="destructive" className="opacity-70 hover:opacity-100">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Filters */}
-        <Card>
+        <Card className="glass-card animate-scale-in">
           <CardHeader>
-            <CardTitle>Filters</CardTitle>
+            <CardTitle className="text-white">Filters & Export</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
+                  <SelectTrigger className="glass border-blue-500/30 text-white">
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="glass border-blue-500/30">
                     <SelectItem value="all">All Users</SelectItem>
                     {users.map(user => (
                       <SelectItem key={user.id} value={user.id}>
@@ -153,9 +218,10 @@ const AdminDashboard = () => {
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                   placeholder="Filter by date"
+                  className="glass border-blue-500/30 text-white"
                 />
               </div>
-              <Button onClick={exportData} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={exportData} className="bg-green-600 hover:bg-green-700 text-white">
                 Export CSV
               </Button>
             </div>
@@ -164,80 +230,54 @@ const AdminDashboard = () => {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Submissions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {filteredSubmissions.length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Present Days</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {filteredSubmissions.filter(s => s.attendance === 'present').length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Seconds</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                {formatSeconds(
-                  filteredSubmissions
-                    .filter(s => s.attendance === 'present')
-                    .reduce((total, s) => total + (s.secondsDone || 0), 0)
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Avg Attendance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {filteredSubmissions.length > 0 
-                  ? Math.round((filteredSubmissions.filter(s => s.attendance === 'present').length / filteredSubmissions.length) * 100)
-                  : 0
-                }%
-              </div>
-            </CardContent>
-          </Card>
+          {[
+            { title: 'Total Submissions', value: filteredSubmissions.length, color: 'text-blue-400' },
+            { title: 'Present Days', value: filteredSubmissions.filter(s => s.attendance === 'present').length, color: 'text-green-400' },
+            { title: 'Total Work Time', value: formatSeconds(filteredSubmissions.filter(s => s.attendance === 'present').reduce((total, s) => total + (s.secondsDone || 0), 0)), color: 'text-purple-400' },
+            { title: 'Avg Attendance', value: `${filteredSubmissions.length > 0 ? Math.round((filteredSubmissions.filter(s => s.attendance === 'present').length / filteredSubmissions.length) * 100) : 0}%`, color: 'text-orange-400' }
+          ].map((stat, index) => (
+            <Card key={stat.title} className="glass-card animate-scale-in" style={{ animationDelay: `${index * 0.1}s` }}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-blue-200">{stat.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${stat.color}`}>
+                  {stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+        {/* Enhanced Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="glass-card animate-slide-up">
             <CardHeader>
-              <CardTitle>Work Hours by User</CardTitle>
+              <CardTitle className="text-white">Work Hours by User</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={userStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value: number) => formatSeconds(value)} />
-                  <Bar dataKey="totalSeconds" fill="#3b82f6" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(59, 130, 246, 0.2)" />
+                  <XAxis dataKey="name" stroke="#93c5fd" />
+                  <YAxis stroke="#93c5fd" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(17, 25, 40, 0.9)', 
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '8px'
+                    }} 
+                    formatter={(value: number) => formatSeconds(value)} 
+                  />
+                  <Bar dataKey="totalSeconds" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <CardHeader>
-              <CardTitle>Overall Attendance</CardTitle>
+              <CardTitle className="text-white">Overall Attendance</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -246,14 +286,12 @@ const AdminDashboard = () => {
                     data={attendanceData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     outerRadius={80}
-                    fill="#8884d8"
                     dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {attendanceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -261,23 +299,46 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <CardHeader>
+              <CardTitle className="text-white">Work Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(59, 130, 246, 0.2)" />
+                  <XAxis dataKey="date" stroke="#93c5fd" />
+                  <YAxis stroke="#93c5fd" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(17, 25, 40, 0.9)', 
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '8px'
+                    }} 
+                  />
+                  <Line type="monotone" dataKey="seconds" stroke="#22c55e" strokeWidth={3} dot={{ fill: '#22c55e', strokeWidth: 2, r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Detailed Table */}
-        <Card>
+        <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <CardHeader>
-            <CardTitle>Recent Submissions ({filteredSubmissions.length})</CardTitle>
+            <CardTitle className="text-white">Recent Submissions ({filteredSubmissions.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Date</th>
-                    <th className="text-left p-2">User</th>
-                    <th className="text-left p-2">Attendance</th>
-                    <th className="text-left p-2">Seconds Done</th>
-                    <th className="text-left p-2">Remarks</th>
+                  <tr className="border-b border-blue-500/30">
+                    <th className="text-left p-3 text-blue-200">Date</th>
+                    <th className="text-left p-3 text-blue-200">User</th>
+                    <th className="text-left p-3 text-blue-200">Attendance</th>
+                    <th className="text-left p-3 text-blue-200">Work Time</th>
+                    <th className="text-left p-3 text-blue-200">Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,22 +346,22 @@ const AdminDashboard = () => {
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .slice(0, 20)
                     .map((submission) => (
-                    <tr key={submission.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">{new Date(submission.date).toLocaleDateString()}</td>
-                      <td className="p-2">{getUserName(submission.userId)}</td>
-                      <td className="p-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <tr key={submission.id} className="border-b border-blue-500/20 hover:bg-blue-600/10 transition-all duration-300">
+                      <td className="p-3 text-white">{new Date(submission.date).toLocaleDateString()}</td>
+                      <td className="p-3 text-blue-100">{getUserName(submission.userId)}</td>
+                      <td className="p-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           submission.attendance === 'present' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
                         }`}>
                           {submission.attendance}
                         </span>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 text-blue-100">
                         {submission.secondsDone ? formatSeconds(submission.secondsDone) : '-'}
                       </td>
-                      <td className="p-2 max-w-xs truncate">{submission.remarks || '-'}</td>
+                      <td className="p-3 max-w-xs truncate text-blue-200">{submission.remarks || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

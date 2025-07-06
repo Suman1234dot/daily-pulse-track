@@ -5,14 +5,13 @@ import { toast } from '@/hooks/use-toast';
 interface User {
   id: string;
   email: string;
-  mobile?: string;
   role: 'employee' | 'admin';
   name: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (emailOrMobile: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -32,21 +31,18 @@ const mockUsers: User[] = [
   {
     id: '1',
     email: 'admin@company.com',
-    mobile: '9876543210',
     role: 'admin',
     name: 'Admin User'
   },
   {
     id: '2',
     email: 'john@company.com',
-    mobile: '9876543211',
     role: 'employee',
     name: 'John Smith'
   },
   {
     id: '3',
     email: 'jane@company.com',
-    mobile: '9876543212',
     role: 'employee',
     name: 'Jane Doe'
   }
@@ -57,25 +53,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('worktrack_user');
+    // Check for stored user session (both regular and remember me)
+    const storedUser = localStorage.getItem('syncink_user') || sessionStorage.getItem('syncink_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (emailOrMobile: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     
     // Mock authentication - in real app this would be Supabase auth
-    const foundUser = mockUsers.find(u => 
-      u.email === emailOrMobile || u.mobile === emailOrMobile
-    );
+    const foundUser = mockUsers.find(u => u.email === email);
     
     if (foundUser && password === 'password123') {
       setUser(foundUser);
-      localStorage.setItem('worktrack_user', JSON.stringify(foundUser));
+      
+      // Store based on remember me preference
+      if (rememberMe) {
+        localStorage.setItem('syncink_user', JSON.stringify(foundUser));
+        // Remove from session storage if exists
+        sessionStorage.removeItem('syncink_user');
+      } else {
+        sessionStorage.setItem('syncink_user', JSON.stringify(foundUser));
+        // Remove from local storage if exists
+        localStorage.removeItem('syncink_user');
+      }
+      
       toast({
         title: "Login Successful",
         description: `Welcome back, ${foundUser.name}!`,
@@ -95,7 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('worktrack_user');
+    localStorage.removeItem('syncink_user');
+    sessionStorage.removeItem('syncink_user');
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
